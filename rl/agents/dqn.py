@@ -557,7 +557,7 @@ class NAFLayer(Layer):
 class NAFAgent(AbstractDQNAgent):
     """Write me
     """
-    def __init__(self, V_model, L_model, mu_model, random_process=None,
+    def __init__(self, V_model, L_model, mu_model, random_process=None, episode_memory=None,
                  covariance_mode='full', target_episode_update=False, *args, **kwargs):
         super(NAFAgent, self).__init__(*args, **kwargs)
 
@@ -577,6 +577,8 @@ class NAFAgent(AbstractDQNAgent):
 
         # State.
         self.reset_states()
+
+        self.episode_memory = episode_memory
 
     def update_target_model_hard(self):
         self.target_V_model.set_weights(self.V_model.get_weights())
@@ -660,7 +662,7 @@ class NAFAgent(AbstractDQNAgent):
     def backward(self, reward, terminal):
         # Store most recent experience in memory.
         if self.step % self.memory_interval == 0:
-            self.memory.append(self.recent_observation, self.recent_action, reward, terminal,
+            self.episode_memory.append(self.recent_observation, self.recent_action, reward, terminal,
                                training=self.training)
 
         metrics = [np.nan for _ in self.metrics_names]
@@ -670,7 +672,8 @@ class NAFAgent(AbstractDQNAgent):
             return metrics
 
         # Train the network on a single stochastic batch.
-        if self.step > self.nb_steps_warmup and self.step % self.train_interval == 0:
+        if self.memory.nb_entries > self.batch_size and \
+                self.step > self.nb_steps_warmup and self.step % self.train_interval == 0:
             experiences = self.memory.sample(self.batch_size)
             assert len(experiences) == self.batch_size
 
@@ -723,7 +726,12 @@ class NAFAgent(AbstractDQNAgent):
             if self.target_episode_update:
                 if terminal:
                     self.update_target_model_hard()
-            else:
+                    for i in range(len(self.episode_memory.nb_entries)):
+                        self.memory.observations.extend(self.episode_memory.observations)
+                        self.memory.actions.extend(self.episode_memory.actions)
+                        self.memory.rewards.extend(self.episode_memory.rewards)
+                        self.memory.terminals.extend(self.episode_memory.terminals)
+
                 if self.step % self.target_model_update == 0:
                     self.update_target_model_hard()
 
