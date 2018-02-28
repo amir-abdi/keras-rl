@@ -726,11 +726,16 @@ class NAFAgent(AbstractDQNAgent):
             if self.target_episode_update:
                 if terminal:
                     self.update_target_model_hard()
-                    for i in range(len(self.episode_memory.nb_entries)):
-                        self.memory.observations.extend(self.episode_memory.observations)
-                        self.memory.actions.extend(self.episode_memory.actions)
-                        self.memory.rewards.extend(self.episode_memory.rewards)
-                        self.memory.terminals.extend(self.episode_memory.terminals)
+                    for i in range(self.episode_memory.nb_entries):
+                        self.memory.observations.append(self.episode_memory.observations[i])
+                        self.memory.actions.append(self.episode_memory.actions[i])
+                        self.memory.rewards.append(self.episode_memory.rewards[i])
+                        self.memory.terminals.append(self.episode_memory.terminals[i])
+
+                    self.episode_memory.observations = []
+                    self.episode_memory.actions = []
+                    self.episode_memory.terminals = []
+                    self.episode_memory.rewards = []
 
                 if self.step % self.target_model_update == 0:
                     self.update_target_model_hard()
