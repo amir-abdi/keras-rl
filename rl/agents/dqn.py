@@ -641,7 +641,8 @@ class NAFAgent(AbstractDQNAgent):
         assert action.shape == (self.nb_actions,)
 
         # Apply noise, if a random process is set.
-        if self.training and self.random_process is not None:
+        if self.training and self.random_process is not None\
+                and self.episode_step > 3:
             noise = self.random_process.sample()
             assert noise.shape == action.shape
             action += noise
